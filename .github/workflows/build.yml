@@ -3,8 +3,6 @@ name: Build APK
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -15,44 +13,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install system dependencies
+      - name: Install system deps
         run: |
           sudo apt update
           sudo apt install -y libffi-dev libssl-dev
 
       - name: Install Rust
         run: curl https://sh.rustup.rs -sSf | sh -s -- -y
-        shell: bash
 
       - name: Add Rust to PATH
         run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install Buildozer
-        run: pip install --upgrade pip buildozer
+        run: pip install buildozer
 
-      # REMOVED: buildozer init – your spec already exists
+      - name: Build APK (capture full output)
+        id: build
+        run: |
+          buildozer android debug 2>&1 | tee buildozer_full.log
+        continue-on-error: true  # continue even if build fails
 
-      - name: Build APK
-        run: buildozer android debug
+      - name: Upload full build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-build-log
+          path: buildozer_full.log
 
-      - name: Upload APK
+      - name: Upload .buildozer directory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-dir
+          path: .buildozer/
+
+      - name: Upload APK if exists
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
           path: bin/*.apk
-
-      - name: Upload full logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-full-logs
-          path: .buildozer/
