@@ -19,10 +19,16 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y libffi-dev libssl-dev
+          sudo apt install -y libffi-dev libssl-dev android-sdk
 
       - name: Install Rust
         run: curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -30,8 +36,15 @@ jobs:
       - name: Add Rust to PATH
         run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+      - name: Configure Android SDK
+        run: |
+          export ANDROID_SDK_ROOT=/usr/lib/android-sdk
+          echo "ANDROID_SDK_ROOT=/usr/lib/android-sdk" >> $GITHUB_ENV
+          mkdir -p /usr/lib/android-sdk/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > /usr/lib/android-sdk/licenses/android-sdk-license
+
       - name: Install Buildozer
-        run: pip install buildozer
+        run: pip install buildozer cython
 
       - name: Build APK
         id: build
