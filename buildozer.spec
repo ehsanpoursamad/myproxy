@@ -5,7 +5,7 @@ package.domain = com.ehsanpoursamad.personalvpn
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,json,txt
 version = 1.0.0
-requirements = python3,kivy==2.3.0,cryptography,h2,brotli,zstandard,asyncio
+requirements = python3,kivy==2.3.0,cryptography,h2,brotli,zstandard
 orientation = portrait
 fullscreen = 1
 android.api = 33
