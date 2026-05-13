@@ -9,21 +9,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: kivy/kivy:latest
+      image: kivy/buildozer:latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install additional dependencies
-        run: |
-          apt-get update
-          apt-get install -y libffi-dev libssl-dev git
-
-      - name: Install Buildozer
-        run: pip install --upgrade buildozer cython
-
       - name: Build APK
         run: |
-          cd ${{ github.workspace }}
+          cd /home/user/hostcwd
           buildozer android debug
 
       - name: Upload APK
@@ -31,11 +23,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
-          path: bin/*.apk
+          path: /home/user/hostcwd/bin/*.apk
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-logs
-          path: .buildozer/logs/
+          path: /home/user/hostcwd/.buildozer/logs/
