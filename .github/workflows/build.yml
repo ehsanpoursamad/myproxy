@@ -8,20 +8,43 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer:latest
-      env:
-        BUILDOZER_WARN_ON_ROOT: 0
     steps:
       - uses: actions/checkout@v4
 
-      - name: Accept Android SDK licenses
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install system dependencies
         run: |
-          mkdir -p /github/home/.android
-          echo -e "\n\nn\n" | sdkmanager --licenses 2>/dev/null || true
-          yes | sdkmanager --licenses || true
+          sudo apt-get update
+          sudo apt-get install -y \
+            libffi-dev libssl-dev \
+            build-essential git
+
+      - name: Install Android SDK/NDK
+        run: |
+          mkdir -p $HOME/.android
+          echo -e "\n\nn\n" | sdkmanager --licenses || true
+          yes | sdkmanager --sdk_root=$HOME/android-sdk \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "ndk;25.2.9519653"
+
+      - name: Install Buildozer & Cython
+        run: pip install --upgrade buildozer cython
 
       - name: Build APK
+        env:
+          ANDROID_SDK_ROOT: ${{ env.HOME }}/android-sdk
+          ANDROID_NDK_ROOT: ${{ env.HOME }}/android-sdk/ndk/25.2.9519653
         run: buildozer android debug
 
       - name: Upload APK
