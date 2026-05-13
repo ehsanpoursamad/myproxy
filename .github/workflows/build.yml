@@ -10,16 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: kivy/buildozer:latest
-      options: --user buildozer
+      env:
+        BUILDOZER_WARN_ON_ROOT: 0
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Fix permissions
-        run: chown -R buildozer:buildozer /home/user/hostcwd
-        
+
       - name: Build APK
         run: |
-          cd /home/user/hostcwd
+          cd ${{ github.workspace }}
           buildozer android debug
 
       - name: Upload APK
@@ -27,11 +25,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
-          path: /home/user/hostcwd/bin/*.apk
+          path: ${{ github.workspace }}/bin/*.apk
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-logs
-          path: /home/user/hostcwd/.buildozer/logs/
+          path: ${{ github.workspace }}/.buildozer/logs/
