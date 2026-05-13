@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,63 +25,59 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install system dependencies
+      - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libffi-dev libssl-dev build-essential git \
-            wget unzip
+          sudo apt-get install -y libffi-dev libssl-dev build-essential git wget unzip
 
-      - name: Set up Android SDK
+      - name: Download Android cmdline-tools
         run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          
-          # Download cmdline-tools
+          ANDROID_HOME="$HOME/android-sdk"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
           cd /tmp
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-11076708_latest.zip
-          mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-          rm commandlinetools-linux-11076708_latest.zip
-          
-          # Set PATH
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
+          rm -f "$ANDROID_HOME/cmdline-tools/latest" || true
+          mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
+          mv cmdline-tools/* "$ANDROID_HOME/cmdline-tools/latest/"
+          rm -rf cmdline-tools
+          # Persist env for subsequent steps (must be KEY=VALUE)
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-          
-          # Accept licenses
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses >/dev/null 2>&1 || true
-          
-          # Install required components
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            --install \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            "ndk;25.2.9519653" \
-            >/dev/null 2>&1
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Install Buildozer and Cython
+      - name: Accept licenses + install SDK components
         run: |
-          pip install --upgrade pip
-          pip install buildozer cython
+          SDKMAN="$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager"
+          $SDKMAN --sdk_root="$HOME/android-sdk" --licenses <<<'y' || true
+          yes | $SDKMAN --sdk_root="$HOME/android-sdk" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653"
 
-      - name: Build APK
+      - name: Install Buildozer & Cython
         run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          export ANDROID_SDK_ROOT=$HOME/android-sdk
-          export ANDROID_NDK_ROOT=$HOME/android-sdk/ndk/25.2.9519653
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+          python -m pip install --upgrade pip
+          pip install --upgrade buildozer cython
+
+      - name: Build APK (capture log)
+        run: |
+          export ANDROID_HOME="$HOME/android-sdk"
+          export ANDROID_SDK_ROOT="$HOME/android-sdk"
+          export ANDROID_NDK_ROOT="$HOME/android-sdk/ndk/25.2.9519653"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          set -x
           buildozer android debug 2>&1 | tee build.log
 
-      - name: Check APK was created
+      - name: Verify APK and fail with diagnostics
         run: |
-          if [ -f bin/*.apk ]; then
+          if ls bin/*.apk 1>/dev/null 2>&1; then
+            echo "APK created:"
             ls -lh bin/*.apk
-            echo "✓ APK build successful"
           else
-            echo "✗ APK not found!"
-            echo "=== Last 100 lines of buildozer output ==="
-            tail -100 .buildozer/logs/buildozer.log || cat build.log
+            echo "APK not found; printing logs for diagnosis"
+            echo "---- last 200 lines of build.log ----"
+            tail -n 200 build.log || true
+            echo "---- listing .buildozer/logs/ ----"
+            ls -l .buildozer/logs || true
             exit 1
           fi
 
@@ -89,9 +88,11 @@ jobs:
           name: personalvpn-apk
           path: bin/*.apk
 
-      - name: Upload build logs
+      - name: Upload build logs (always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-logs
-          path: .buildozer/logs/
+          name: build-logs
+          path: |
+            build.log
+            .buildozer/logs/**
