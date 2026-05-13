@@ -13,6 +13,7 @@ android.minapi = 21
 android.permissions = INTERNET,ACCESS_NETWORK_STATE,WRITE_SETTINGS,ACCESS_WIFI_STATE,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE
 android.arch = arm64-v8a
 android.presplash_color = #FFFFFF
+android.accept_sdk_license = True
 android.gradle_dependencies = 
 p4a.branch = master
 android.services = proxy_service:foreground
