@@ -5,42 +5,26 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: kivy/kivy:latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Set up Java (required by Android SDK)
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-
-      - name: Install system dependencies
+      - name: Install additional dependencies
         run: |
-          sudo apt update
-          sudo apt install -y libffi-dev libssl-dev
-
-      - name: Install Rust (for cryptography – optional, but keep for later)
-        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
-
-      - name: Add Rust to PATH
-        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          apt-get update
+          apt-get install -y libffi-dev libssl-dev git
 
       - name: Install Buildozer
-        run: pip install buildozer cython
+        run: pip install --upgrade buildozer cython
 
       - name: Build APK
-        run: buildozer android debug
+        run: |
+          cd ${{ github.workspace }}
+          buildozer android debug
 
       - name: Upload APK
         if: success()
@@ -49,9 +33,9 @@ jobs:
           name: personalvpn-apk
           path: bin/*.apk
 
-      - name: Upload full build log
-        if: always()
+      - name: Upload build logs on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-full-log
-          path: .buildozer/logs/*.log
+          name: buildozer-logs
+          path: .buildozer/logs/
