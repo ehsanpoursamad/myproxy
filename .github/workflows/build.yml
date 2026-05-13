@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # ignore deprecation notice
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,13 +17,18 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev python3-pip
+          sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev python3-pip liblz4-dev libbrotli-dev
       - name: Install Buildozer
         run: pip install buildozer
-      - name: Build APK
-        run: buildozer android debug
-      - name: Upload APK
+      - name: Build APK (verbose)
+        run: buildozer android debug --verbose 2>&1 | tee build.log
+      - name: Upload APK (if any)
         uses: actions/upload-artifact@v4
         with:
           name: PersonalVPN
           path: bin/*.apk
+      - name: Upload build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
