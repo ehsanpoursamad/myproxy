@@ -7,6 +7,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  # Force actions to use Node.js 24 to eliminate deprecation warnings
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,17 +43,32 @@ jobs:
           buildozer init
 
       - name: Build APK
-        run: buildozer android debug
+        id: build
+        continue-on-error: false
+        run: |
+          # Clean previous build artifacts to ensure a fresh build
+          rm -rf .buildozer
+          buildozer android debug
+
+      - name: List output files
+        run: |
+          echo "Contents of bin directory:"
+          ls -la bin/ || echo "bin directory does not exist"
+          echo "Contents of .buildozer directory (if exists):"
+          ls -la .buildozer/ || echo ".buildozer directory does not exist"
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
           path: bin/*.apk
+          if-no-files-found: error
 
-      - name: Upload build log (if APK fails)
-        if: failure()
+      - name: Upload full buildozer logs (if APK missing)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
-          path: .buildozer/logs/*
+          name: full-buildozer-logs
+          path: .buildozer/
+          if-no-files-found: ignore
