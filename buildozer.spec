@@ -15,13 +15,8 @@ fullscreen = 0
 log_level = 2
 warn_on_root = 1
 
-# Force SDK/NDK acceptance without prompts
 android.accept_sdk_license = True
-android.skip_update = False
-android.api = 33
 android.minapi = 21
-android.ndk = 25c
-android.ndk_api = 21
 android.archs = arm64-v8a
 
 android.permissions = INTERNET,FOREGROUND_SERVICE
