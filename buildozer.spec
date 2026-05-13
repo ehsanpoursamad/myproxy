@@ -15,8 +15,11 @@ fullscreen = 0
 log_level = 2
 warn_on_root = 1
 
+# Force use of system-installed SDK/NDK, not Buildozer's download
 android.accept_sdk_license = True
+android.skip_update = True
 android.minapi = 21
+android.api = 33
 android.archs = arm64-v8a
 
 android.permissions = INTERNET,FOREGROUND_SERVICE
