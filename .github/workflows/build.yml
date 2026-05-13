@@ -16,20 +16,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build APK
-        run: |
-          cd ${{ github.workspace }}
-          buildozer android debug
+        run: buildozer android debug
 
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
-          path: ${{ github.workspace }}/bin/*.apk
+          path: bin/*.apk
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-logs
-          path: ${{ github.workspace }}/.buildozer/logs/
+          path: .buildozer/logs/
