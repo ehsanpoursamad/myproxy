@@ -1,34 +1,55 @@
 name: Build APK
+
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev python3-pip liblz4-dev libbrotli-dev
+          sudo apt install -y libffi-dev libssl-dev
+
+      - name: Install Rust (required for cryptography)
+        run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+        shell: bash
+
+      - name: Add Rust to PATH
+        run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install Buildozer
-        run: pip install buildozer
-      - name: Build APK (verbose)
-        run: buildozer android debug --verbose 2>&1 | tee build.log
-      - name: Upload APK (if any)
+        run: |
+          pip install --upgrade pip
+          pip install buildozer
+          buildozer init
+
+      - name: Build APK
+        run: buildozer android debug
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PersonalVPN
+          name: personalvpn-apk
           path: bin/*.apk
-      - name: Upload build log
+
+      - name: Upload build log (if APK fails)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
-          path: build.log
+          path: .buildozer/logs/*
