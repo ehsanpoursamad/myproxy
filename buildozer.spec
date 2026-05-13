@@ -15,3 +15,4 @@ android.arch = arm64-v8a
 android.presplash_color = #FFFFFF
 android.gradle_dependencies = 
 p4a.branch = master
+android.services = proxy_service:foreground
