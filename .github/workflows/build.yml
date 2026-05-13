@@ -15,6 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Accept Android SDK licenses
+        run: |
+          mkdir -p /github/home/.android
+          echo -e "\n\nn\n" | sdkmanager --licenses 2>/dev/null || true
+          yes | sdkmanager --licenses || true
+
       - name: Build APK
         run: buildozer android debug
 
