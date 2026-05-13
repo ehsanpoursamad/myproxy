@@ -29,11 +29,24 @@ jobs:
             libffi-dev libssl-dev \
             build-essential git
 
-      - name: Install Android SDK/NDK
+      - name: Download and install Android SDK
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          rm commandlinetools-linux-11076708_latest.zip
+          mv cmdline-tools latest
+          
+      - name: Accept Android SDK licenses
         run: |
           mkdir -p $HOME/.android
-          echo -e "\n\nn\n" | sdkmanager --licenses || true
-          yes | sdkmanager --sdk_root=$HOME/android-sdk \
+          echo -e "\n\nn\n" | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Install Android platforms and build-tools
+        run: |
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
             "platforms;android-33" \
             "build-tools;33.0.2" \
             "ndk;25.2.9519653"
