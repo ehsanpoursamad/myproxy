@@ -22,3 +22,5 @@ android.ndk_api = 21
 android.archs = arm64-v8a
 # Permissions your VPN app might need
 android.permissions = INTERNET, FOREGROUND_SERVICE
+# Android SDK root path
+android.sdk_root = /usr/lib/android-sdk
