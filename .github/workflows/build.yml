@@ -1,17 +1,102 @@
-- name: Accept licenses + install SDK components
-  run: |
-    SDKMAN="$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager"
-    $SDKMAN --sdk_root="$HOME/android-sdk" --licenses <<<'y' || true
-    yes | $SDKMAN --sdk_root="$HOME/android-sdk" \
-      "platforms;android-33" \
-      "build-tools;33.0.2" \
-      "ndk;25.2.9519653"
+name: Build APK
 
-- name: Install additional build tools
-  run: |
-    sudo apt-get install -y android-sdk-build-tools
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
-- name: Install Buildozer & Cython
-  run: |
-    python -m pip install --upgrade pip
-    pip install --upgrade buildozer cython
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi-dev libssl-dev build-essential git wget unzip
+
+      - name: Download Android cmdline-tools
+        run: |
+          ANDROID_HOME="$HOME/android-sdk"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          cd /tmp
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          rm -f "$ANDROID_HOME/cmdline-tools/latest" || true
+          mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
+          mv cmdline-tools/* "$ANDROID_HOME/cmdline-tools/latest/"
+          rm -rf cmdline-tools
+          # Persist env for subsequent steps (must be KEY=VALUE)
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Accept licenses + install SDK components
+        run: |
+          SDKMAN="$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager"
+          $SDKMAN --sdk_root="$HOME/android-sdk" --licenses <<<'y' || true
+          yes | $SDKMAN --sdk_root="$HOME/android-sdk" "platforms;android-33" "build-tools;33.0.2" "ndk;25.2.9519653"
+
+      - name: Install additional build tools
+        run: |
+          sudo apt-get install -y android-sdk-build-tools
+
+      - name: Install Buildozer & Cython
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade buildozer cython
+
+      - name: Build APK (capture log)
+        run: |
+          export ANDROID_HOME="$HOME/android-sdk"
+          export ANDROID_SDK_ROOT="$HOME/android-sdk"
+          export ANDROID_NDK_ROOT="$HOME/android-sdk/ndk/25.2.9519653"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          set -x
+          buildozer android debug 2>&1 | tee build.log
+
+      - name: Verify APK and fail with diagnostics
+        run: |
+          if ls bin/*.apk 1>/dev/null 2>&1; then
+            echo "APK created:"
+            ls -lh bin/*.apk
+          else
+            echo "APK not found; printing logs for diagnosis"
+            echo "---- last 200 lines of build.log ----"
+            tail -n 200 build.log || true
+            echo "---- listing .buildozer/logs/ ----"
+            ls -l .buildozer/logs || true
+            exit 1
+          fi
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: personalvpn-apk
+          path: bin/*.apk
+
+      - name: Upload build logs (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build.log
+            .buildozer/logs/**
