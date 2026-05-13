@@ -11,7 +11,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -20,7 +19,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install system deps
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y libffi-dev libssl-dev
@@ -34,29 +33,20 @@ jobs:
       - name: Install Buildozer
         run: pip install buildozer
 
-      - name: Build APK (capture full output)
+      - name: Build APK
         id: build
-        run: |
-          buildozer android debug 2>&1 | tee buildozer_full.log
-        continue-on-error: true  # continue even if build fails
+        run: buildozer android debug
 
-      - name: Upload full build log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: full-build-log
-          path: buildozer_full.log
-
-      - name: Upload .buildozer directory
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-dir
-          path: .buildozer/
-
-      - name: Upload APK if exists
+      - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
           path: bin/*.apk
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-logs
+          path: .buildozer/
