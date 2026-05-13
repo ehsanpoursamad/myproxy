@@ -23,7 +23,7 @@ version = 0.1
 
 # (list) Application requirements
 # REMOVED asyncio (standard library) – it must NOT be listed
-requirements = python3,kivy==2.3.0,cryptography,h2,brotli,zstandard
+# requirements = python3,kivy==2.3.0,cryptography,h2,brotli,zstandard
 
 # (str) Supported orientation (portrait, landscape, all)
 orientation = portrait
