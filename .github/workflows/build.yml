@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 env:
-  # Force actions to use Node.js 24 to eliminate deprecation warnings
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -29,7 +28,7 @@ jobs:
           sudo apt update
           sudo apt install -y libffi-dev libssl-dev
 
-      - name: Install Rust (required for cryptography)
+      - name: Install Rust
         run: curl https://sh.rustup.rs -sSf | sh -s -- -y
         shell: bash
 
@@ -37,38 +36,23 @@ jobs:
         run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Install Buildozer
-        run: |
-          pip install --upgrade pip
-          pip install buildozer
-          buildozer init
+        run: pip install --upgrade pip buildozer
+
+      # REMOVED: buildozer init – your spec already exists
 
       - name: Build APK
-        id: build
-        continue-on-error: false
-        run: |
-          # Clean previous build artifacts to ensure a fresh build
-          rm -rf .buildozer
-          buildozer android debug
+        run: buildozer android debug
 
-      - name: List output files
-        run: |
-          echo "Contents of bin directory:"
-          ls -la bin/ || echo "bin directory does not exist"
-          echo "Contents of .buildozer directory (if exists):"
-          ls -la .buildozer/ || echo ".buildozer directory does not exist"
-
-      - name: Upload APK artifact
+      - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: personalvpn-apk
           path: bin/*.apk
-          if-no-files-found: error
 
-      - name: Upload full buildozer logs (if APK missing)
-        if: always()
+      - name: Upload full logs on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: full-buildozer-logs
+          name: buildozer-full-logs
           path: .buildozer/
-          if-no-files-found: ignore
